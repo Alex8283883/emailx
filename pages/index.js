@@ -1,42 +1,17 @@
 import useSWR from 'swr'
-import { useEffect, useState } from 'react'
 
-const fetcher = (url, token) =>
+const EMAIL_ADDRESS = 'onionx@dcpa.net'
+const BEARER_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpYXQiOjE3NDgwNzQ2ODAsInJvbGVzIjpbIlJPTEVfVVNFUiJdLCJhZGRyZXNzIjoib25pb254QGRjcGEubmV0IiwiaWQiOiI2ODMxODA4YzJiMTFkNzhhYmQwMTllOTEiLCJtZXJjdXJlIjp7InN1YnNjcmliZSI6WyIvYWNjb3VudHMvNjgzMTgwOGMyYjExZDc4YWJkMDE5ZTkxIl19fQ.uJ0spRCRurMDTiRPiLMJbC-05B7vx12Bholn-BufKzScQyYhf0zKykeEJ2cENiPEgk4tzsuEIRP46e7s9k8F3Q'
+
+const fetcher = (url) =>
   fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${BEARER_TOKEN}` },
   }).then(res => res.json())
 
 export default function Home() {
-  const [token, setToken] = useState(null)
-
-  // Set your actual email and password (already registered on https://mail.tm)
-  const address = "onionx@mail.tm"
-  const password = "Manuy002"
-
-  useEffect(() => {
-    const login = async () => {
-      try {
-        const tokenRes = await fetch('https://api.mail.tm/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, password })
-        })
-        const tokenData = await tokenRes.json()
-        if (tokenData.token) {
-          setToken(tokenData.token)
-        } else {
-          console.error('Failed to authenticate:', tokenData)
-        }
-      } catch (err) {
-        console.error('Login error:', err)
-      }
-    }
-    login()
-  }, [])
-
   const { data: messages } = useSWR(
-    token ? ['https://api.mail.tm/messages', token] : null,
-    ([url, t]) => fetcher(url, t),
+    'https://api.mail.tm/messages',
+    fetcher,
     { refreshInterval: 5000 }
   )
 
@@ -45,12 +20,11 @@ export default function Home() {
   )
 
   const { data: email } = useSWR(
-    token && latest ? [`https://api.mail.tm/messages/${latest.id}`, token] : null,
-    ([url, t]) => fetcher(url, t),
+    latest ? `https://api.mail.tm/messages/${latest.id}` : null,
+    fetcher,
     { refreshInterval: 5000 }
   )
 
-  if (!token) return <p>Logging into mailbox...</p>
   if (!email) return <p style={{ color: 'red' }}>Waiting for email from no-reply@skinape.com...</p>
 
   return (
