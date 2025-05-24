@@ -1,63 +1,62 @@
 import useSWR from 'swr'
 import { useEffect, useState } from 'react'
 
-const fetcher = url => fetch(url).then(res => res.json())
+const fetcher = (url, token) =>
+  fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(res => res.json())
 
 export default function Home() {
   const [token, setToken] = useState(null)
-  const [accountId, setAccountId] = useState(null)
-  const [emailId, setEmailId] = useState(null)
+
+  // Set your actual email and password (already registered on https://mail.tm)
+  const address = "onionx@mail.tm"
+  const password = "Manuy002"
 
   useEffect(() => {
     const login = async () => {
-      const domainRes = await fetch('https://api.mail.tm/domains')
-      const domainData = await domainRes.json()
-      const domain = domainData['hydra:member'][0].domain
-      const random = Math.random().toString(36).substring(2, 8)
-      const address = `onionx_${random}@${domain}`
-      const password = "password"
-
-      await fetch('https://api.mail.tm/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, password })
-      })
-
-      const tokenRes = await fetch('https://api.mail.tm/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, password })
-      })
-      const tokenData = await tokenRes.json()
-      setToken(tokenData.token)
+      try {
+        const tokenRes = await fetch('https://api.mail.tm/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, password })
+        })
+        const tokenData = await tokenRes.json()
+        if (tokenData.token) {
+          setToken(tokenData.token)
+        } else {
+          console.error('Failed to authenticate:', tokenData)
+        }
+      } catch (err) {
+        console.error('Login error:', err)
+      }
     }
     login()
   }, [])
 
-  const { data: messages } = useSWR(token ? ['https://api.mail.tm/messages', token] : null,
-    ([url, token]) =>
-      fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json()),
+  const { data: messages } = useSWR(
+    token ? ['https://api.mail.tm/messages', token] : null,
+    ([url, t]) => fetcher(url, t),
     { refreshInterval: 5000 }
   )
 
-  const latestMessage = messages?.['hydra:member']?.find(msg =>
-    msg.from.address === 'no-reply@skinape.com'
+  const latest = messages?.['hydra:member']?.find(
+    msg => msg.from.address === 'no-reply@skinape.com'
   )
 
   const { data: email } = useSWR(
-    token && latestMessage ? [`https://api.mail.tm/messages/${latestMessage.id}`, token] : null,
-    ([url, token]) =>
-      fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json()),
+    token && latest ? [`https://api.mail.tm/messages/${latest.id}`, token] : null,
+    ([url, t]) => fetcher(url, t),
     { refreshInterval: 5000 }
   )
 
-  if (!token) return <p>Generating mailbox...</p>
+  if (!token) return <p>Logging into mailbox...</p>
   if (!email) return <p style={{ color: 'red' }}>Waiting for email from no-reply@skinape.com...</p>
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Latest Email</h1>
-      <p dangerouslySetInnerHTML={{ __html: email.html[0] }}></p>
+      <h1>Latest Email from skinape</h1>
+      <p dangerouslySetInnerHTML={{ __html: email.html?.[0] || email.text || 'No content' }} />
     </div>
   )
 }
