@@ -12,7 +12,7 @@ export default function Home() {
   const { data: messages } = useSWR(
     'https://api.mail.tm/messages',
     fetcher,
-    { refreshInterval: 3000 }
+    { refreshInterval: 2000 }
   )
 
   const latest = messages?.['hydra:member']?.find(
@@ -22,7 +22,7 @@ export default function Home() {
   const { data: email } = useSWR(
     latest ? `https://api.mail.tm/messages/${latest.id}` : null,
     fetcher,
-    { refreshInterval: 3000 }
+    { refreshInterval: 2000 }
   )
 
   if (!email) return <p style={{ color: 'red' }}>Waiting for email from no-reply@skinape.com...</p>
